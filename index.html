@@ -12,56 +12,12 @@
 
 </head>
 <body>
-    <div>
-        <h1>Todos</h1>
-        <input id="todo" type="text" placeholder="Add Todo">
-        <button id="todoBtn">Add todo</button>
-        <ul id="todos"></ul>
-    </div>
-    <div>
-        <h1>Goals</h1>
-        <input id="goal" type="text" placeholder="Add Goal">
-        <button id="goalBtn">Add Goal</button>
-        <ul id="goals"></ul>
-    </div>
-
-    <hr />
-
     <div id="app"></div>
 
     <script type="text/javascript">
         function generateId () {
             return Math.random().toString(36).substring(2) + (new Date()).getTime().toString(36)
         }   
-        // library code
-
-        // function createStore(reducer) {
-
-        //     let state;
-        //     let listeners = [];
-
-
-        //     const subscribe = (listener) => {
-        //         listeners.push(listener);
-
-        //         return () => {
-        //             listeners = listeners.filter(l => l !== listener);
-        //         }
-        //     }
-
-        //     const dispatch = (action) => {
-        //         state = reducer(state, action);
-        //         listeners.forEach(listener => listener())
-        //     }
-
-        //     const getState = () => state;
-
-        //     return {
-        //         getState,
-        //         dispatch,
-        //         subscribe
-        //     }
-        // }
         
         const ADD_TODO = 'ADD_TODO';
         const REMOVE_TODO = 'REMOVE_TODO';
@@ -163,13 +119,6 @@
             }
         }
 
-        // function app(state = {}, action) {
-        //     return {
-        //         goals: goals(state.goals, action),
-        //         todos: todos(state.todos, action)
-        //      }
-        // }
-
         const store = Redux.createStore(Redux.combineReducers({
             todos,
             goals
@@ -183,90 +132,32 @@
             todos.forEach(addTodoToDOM);
             goals.forEach(addGoalToDOM);
         })
-        // DOM code
-
-        function createRemoveButton(onClick) {
-            const removeBtn = document.createElement('button');
-            removeBtn.innerHTML = 'X';
-            removeBtn.addEventListener('click', onClick);
-            return removeBtn;
-        }
-
-        function addTodoToDOM(todo) {
-            const node = document.createElement('li');
-            const text = document.createTextNode(todo.name);
-            const removeBtn = createRemoveButton(() => {
-                store.dispatch(removeTodoAction(todo.id));
-            }); 
-            node.appendChild(text);
-            node.appendChild(removeBtn);
-
-            node.style.textDecoration = todo.isCompleted ? 'line-through' : 'none';
-            node.addEventListener('click', () => {
-                store.dispatch(toggleTodoAction(todo.id))
-            });
-
-            document.getElementById('todos')
-                .appendChild(node);
-
-        }
-
-        function addGoalToDOM(goal) {
-            const node = document.createElement('li');
-            const text = document.createTextNode(goal.name);
-            const removeBtn = createRemoveButton(() => {
-                store.dispatch(removeGoalAction(goal.id));
-            });
-
-            node.appendChild(text);
-            node.appendChild(removeBtn);
-            node.style.textDecoration = goal.isCompleted ? 'line-through': 'none';
-            document.getElementById('goals')
-                .appendChild(node);
-        }
-
-        function addTodo() {
-            const input = document.getElementById('todo');
-            const name = input.value;
-            input.value = '';
-
-            store.dispatch(addTodoAction({
-                id: generateId(),
-                name,
-                isCompleted: false
-            }))
-        }
-
-        function addGoal() {
-            const input = document.getElementById('goal');
-            const name = input.value;
-            input.value = '';
-
-            store.dispatch(addGoalAction({
-                id: generateId(),
-                name
-            }))
-        }
-        
-        document.getElementById('todoBtn')
-         .addEventListener('click', addTodo)
-
-        document.getElementById('goalBtn')
-        .addEventListener('click', addGoal)
-
     </script>
 
     <script type="text/babel">
         function List(props) {
             return (
                 <ul>
-                    <li>LIST</li>
+                    {
+                        props.items.map(item => (
+                            <li key={item.id} > 
+                                <span
+                                    style={{ textDecoration: item.isCompleted ? 'line-through': 'none' }} 
+                                    onClick={() => props.toggle(item)}   
+                                > 
+                                    {item.name}
+                                </span>
+                                <button onClick={() => props.removeItem(item)}>X</button>
+                            </li>
+                        ))
+                    }
                 </ul>
             )
         }
 
         class Todos extends React.Component {
-            addItem = e => {
+
+            addTodo = e => {
                 e.preventDefault();
                 const name = this.input.value;
                 this.input.value = '';
@@ -278,6 +169,16 @@
                 }))
             }
 
+            removeTodo = todo => {
+                this.props.store.dispatch(
+                    removeTodoAction(todo.id)
+                )
+            }
+
+            toggleTodo = todo => {
+                this.props.store.dispatch(toggleTodoAction(todo.id))
+            }
+
             render() {
                 return (
                     <div>
@@ -287,9 +188,12 @@
                             placeholder='Add Todo'
                             ref={(input) => this.input = input}
                         />
-                        <button onClick={this.addItem}>Add Todo</button>
+                        <button onClick={this.addTodo}>Add Todo</button>
 
-                        <List />
+                        <List 
+                            toggle={this.toggleTodo}
+                            removeItem={this.removeTodo}
+                            items={this.props.todos}/>
                     </div>
                 )
             }
@@ -308,6 +212,14 @@
                 }))
             }
 
+            removeGoal = goal => {
+                this.props.store.dispatch(removeGoalAction(goal.id))
+            }
+
+            toggleGoal = goal => {
+                this.props.store.dispatch(toggleGoal(goal.id));
+            }
+
             render() {
                 return (
                     <div>
@@ -317,18 +229,33 @@
                         <button onClick={this.addGoal}>
                             Add goal
                         </button>
-                        <List />
+                        <List 
+                            toggle={this.props.toggleGoal}
+                            items={this.props.goals}
+                            removeItem={this.removeGoal}
+                        />
                     </div>
                 )
             }
         }
 
         class App extends React.Component {
+            
+            componentDidMount() {
+                const { store } = this.props;
+
+                store.subscribe(() => this.forceUpdate());
+
+            }
+
             render() {
+                const { store } = this.props;
+                const { todos, goals } =  store.getState();
+
                 return (
                     <div>
-                        <Todos store={this.props.store}/>
-                        <Goals store={this.props.store}/>
+                        <Todos todos={todos} store={store}/>
+                        <Goals goals={goals} store={store}/>
                     </div>
                 )
             }
