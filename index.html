@@ -53,6 +53,14 @@
             return result;
         }
 
+        const thunk = store => next => action => {
+            if(typeof action === "function") {
+                return action(store.dispatch)
+            }
+
+            return next(action);
+        }
+
         function addTodoAction(todo) {
             return {
                 type: ADD_TODO,
@@ -64,6 +72,19 @@
             return {
                 type: REMOVE_TODO,
                 id
+            }
+        }
+
+        function handleDeleteTodo(todo) {
+            return dispatch => {
+                dispatch(
+                    removeTodoAction(todo.id)
+                );
+    
+                return API.deleteTodo(todo.id).catch(() => {
+                    dispatch(addTodoAction(todo));
+                    alert('An error occured. Try again')
+                });
             }
         }
 
@@ -145,7 +166,7 @@
             todos,
             goals,
             loading
-        }), Redux.applyMiddleware(checker));
+        }), Redux.applyMiddleware(checker,logger, thunk));
     </script>
 
     <script type="text/babel">
@@ -174,29 +195,29 @@
             addTodo = e => {
                 e.preventDefault();
                 const name = this.input.value;
-                this.input.value = '';
 
-                this.props.store.dispatch(addTodoAction({
-                    id: generateId(),
-                    name,
-                    isCompleted: false
-                }))
+                API.saveTodo(this.input.value).then(todo => {
+                    this.props.store.dispatch(addTodoAction(todo));
+                    this.input.value = '';
+                }).catch(e => {
+                    alert('An error occured. Try again')
+                })
             }
 
             removeTodo = todo => {
-                
                 this.props.store.dispatch(
-                    removeTodoAction(todo.id)
+                    handleDeleteTodo(todo)
                 );
-
-                API.deleteTodo(todo.id).catch(() => {
-                    this.props.store.dispatch(addTodoAction(todo));
-                    alert('An error occured. Try again')
-                });
             }
 
             toggleTodo = todo => {
-                this.props.store.dispatch(toggleTodoAction(todo.id))
+                this.props.store.dispatch(toggleTodoAction(todo.id));
+
+                API.saveTodoToggle(todo.id).catch(() => {
+                    this.props.store.dispatch(toggleTodoAction(todo.id));
+                    alert('An error occured. Try again')
+
+                });
             }
 
             render() {
@@ -224,12 +245,12 @@
             addGoal = e => {
                 e.preventDefault();
                 const name = this.input.value;
-                this.input.value = '';
-                this.props.store.dispatch(addGoalAction({
-                    id: generateId(),
-                    name,
-                    
-                }))
+                API.saveGoal(name).then(goal => {
+                    this.props.store.dispatch(addGoalAction(goal));
+                    this.input.value = '';
+                }).catch(() => {
+                    alert('An error occured. Try again')
+                })
             }
 
             removeGoal = goal => {
@@ -241,9 +262,6 @@
                 });
             }
 
-            toggleGoal = goal => {
-                this.props.store.dispatch(toggleGoal(goal.id));
-            }
 
             render() {
                 return (
@@ -255,7 +273,6 @@
                             Add goal
                         </button>
                         <List 
-                            toggle={this.props.toggleGoal}
                             items={this.props.goals}
                             removeItem={this.removeGoal}
                         />
