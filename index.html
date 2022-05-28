@@ -75,6 +75,35 @@
             }
         }
 
+        function toggleTodoAction(id) {
+            return {
+                type: TOGGLE_TODO,
+                id
+            }
+        }
+
+        function fetchAndAddTodo(name, cb) {
+            return dispatch => {
+                API.saveTodo(name).then(todo => {
+                    dispatch(addTodoAction(todo));
+                    cb();
+                }).catch(e => {
+                    alert('An error occured. Try again')
+                })
+            }
+        }
+
+        function handleToggleTodo(todo) {
+            return dispatch => {
+                dispatch(toggleTodoAction(todo.id));
+    
+                return API.saveTodoToggle(todo.id).catch(() => {
+                    dispatch(toggleTodoAction(todo.id));
+                    alert('An error occured. Try again')
+                });
+            }
+        }
+
         function handleDeleteTodo(todo) {
             return dispatch => {
                 dispatch(
@@ -85,13 +114,6 @@
                     dispatch(addTodoAction(todo));
                     alert('An error occured. Try again')
                 });
-            }
-        }
-
-        function toggleTodoAction(id) {
-            return {
-                type: TOGGLE_TODO,
-                id
             }
         }
 
@@ -106,6 +128,28 @@
             return {
                 type: REMOVE_GOAL,
                 id
+            }
+        }
+
+        function fetchAndAddGoal(name, cb) {
+            return dispatch => {
+                API.saveGoal(name).then(goal => {
+                    dispatch(addGoalAction(goal));
+                    cb();
+                }).catch(() => {
+                    alert('An error occured. Try again')
+                })
+            }
+        }
+
+        function handleRemoveGoal(goal) {
+            return dispatch => {
+                dispatch(removeGoalAction(goal.id));
+
+                API.deleteGoal(goal.id).catch(() => {
+                    dispatch(addGoalAction(goal));
+                    alert('An error occured. Try again')
+                });
             }
         }
 
@@ -167,6 +211,7 @@
             goals,
             loading
         }), Redux.applyMiddleware(checker,logger, thunk));
+    
     </script>
 
     <script type="text/babel">
@@ -194,14 +239,7 @@
 
             addTodo = e => {
                 e.preventDefault();
-                const name = this.input.value;
-
-                API.saveTodo(this.input.value).then(todo => {
-                    this.props.store.dispatch(addTodoAction(todo));
-                    this.input.value = '';
-                }).catch(e => {
-                    alert('An error occured. Try again')
-                })
+                this.props.store.dispatch(fetchAndAddTodo(this.input.value, () => this.input.value = '' ));
             }
 
             removeTodo = todo => {
@@ -211,13 +249,7 @@
             }
 
             toggleTodo = todo => {
-                this.props.store.dispatch(toggleTodoAction(todo.id));
-
-                API.saveTodoToggle(todo.id).catch(() => {
-                    this.props.store.dispatch(toggleTodoAction(todo.id));
-                    alert('An error occured. Try again')
-
-                });
+                this.props.store.dispatch(handleToggleTodo(todo))
             }
 
             render() {
@@ -244,22 +276,16 @@
 
             addGoal = e => {
                 e.preventDefault();
-                const name = this.input.value;
-                API.saveGoal(name).then(goal => {
-                    this.props.store.dispatch(addGoalAction(goal));
-                    this.input.value = '';
-                }).catch(() => {
-                    alert('An error occured. Try again')
-                })
+                this.props.store.dispatch(fetchAndAddGoal(
+                    this.input.value,
+                    () => this.input.value = ''
+                ));
             }
 
             removeGoal = goal => {
-                this.props.store.dispatch(removeGoalAction(goal.id));
-
-                API.deleteGoal(goal.id).catch(() => {
-                    this.props.store.dispatch(addGoalAction(goal));
-                    alert('An error occured. Try again')
-                });
+                this.props.store.dispatch(
+                    handleRemoveGoal(goal)
+                );
             }
 
 
